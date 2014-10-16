@@ -811,7 +811,24 @@ class HexGroup(object, env.Spatial):
 
         return deepcopy(self)
 
-    def write_featclass(self, out_gdb=None, out_name=None, overwrite=False):
+    def write(self, workspace=None, name=None, overwrite=False):
+        """Write HexGroup data out to a file."""
+
+        if workspace and name and overwrite:
+
+            if os.path.splitext(workspace)[-1] in ('.gdb', '.sde', '.mdb'):
+
+                self.__arcpy_write_features(workspace, name, overwrite)
+
+            else:
+
+                self.__osgeo_write_features(workspace, name, overwrite)
+
+        else:
+
+            print("Missing arguments: workspace: %s name: %s overwrite: %s" % (workspace, name, overwrite))
+
+    def __arcpy_write_features(self, workspace=None, name=None, overwrite=False):
         """Create fgdb feature class containing one feature for each HexCell in HexGroup using arcpy library."""
 
         import arcpy
@@ -820,17 +837,36 @@ class HexGroup(object, env.Spatial):
 
             arcpy.env.overwriteOutput = True
 
-        if not arcpy.Exists(out_gdb):
+        if not arcpy.Exists(workspace):
 
-            print "File Geodatabase: %s" % out_gdb
+            print("Workspace: %s" % workspace)
 
-            answer = raw_input("File Geodatabase does not exist. Would you like to create it (Y/N)? ")
+            answer = raw_input("Workspace does not exist. Would you like to create it (Y/N)? ")
 
             if answer.lower() in ('y', 'yes'):
 
-                out_folder_path, out_gdb_name = os.path.split(out_gdb)[0], os.path.split(out_gdb)[1]
-                arcpy.CreateFileGDB_management(out_folder_path, out_gdb_name, 'CURRENT')
-                print "Created File Geodatabase: %s" % out_gdb
+                if os.path.splitext(workspace)[-1] != '.gdb':
+
+                    out_folder_path, out_gdb_name = os.path.split(workspace)[0], os.path.split(workspace)[1]
+                    arcpy.CreateFileGDB_management(out_folder_path, out_gdb_name, 'CURRENT')
+                    print("Created workspace: %s" % workspace)
+
+                elif os.path.splitext(workspace)[-1] != '.mdb':
+
+                    out_folder_path, out_mdb_name = os.path.split(workspace)[0], os.path.split(workspace)[1]
+                    arcpy.CreatePersonalGDB_management(out_folder_path, out_mdb_name, 'CURRENT')
+                    print("Created workspace: %s" % workspace)
+
+                elif os.path.splitext(workspace)[-1] == '':
+
+                    os.mkdir(workspace)
+                    print("Created workspace: %s" % workspace)
+
+                else:
+
+                    print("Unable to create workspace of type %s" % os.path.splitext(workspace)[-1])
+
+                    return
 
             else:
 
@@ -838,12 +874,12 @@ class HexGroup(object, env.Spatial):
 
                 return
 
-        template = os.path.join(get_module_dir(), 'fc_template', 'hex_template.gdb', 'hex_template')
+        template = os.path.join(get_module_dir(), 'shp_template', 'hex_template.shp')
         spatial_reference = arcpy.Describe(template).spatialReference
         geometry_type = 'POLYGON'
         has_m = 'DISABLED'
         has_z = 'DISABLED'
-        out_fc = arcpy.CreateFeatureclass_management(out_gdb, out_name, geometry_type,
+        out_fc = arcpy.CreateFeatureclass_management(workspace, name, geometry_type,
                                                      template, has_m, has_z, spatial_reference)
         icur = arcpy.InsertCursor(out_fc)
 
@@ -867,6 +903,7 @@ class HexGroup(object, env.Spatial):
 
         return out_fc
 
+    # DEPRECATED
     def write_shapefile(self, out_dir=None, out_name=None, overwrite=False):
         """Create shapefile containing one feature for each HexCell in HexGroup using arcpy library.
 
@@ -924,7 +961,7 @@ class HexGroup(object, env.Spatial):
 
         return shp
 
-    def write_osgeo_shapefile(self, out_dir=None, out_name=None, overwrite=False):
+    def __osgeo_write_features(self, workspace=None, name=None, overwrite=False):
         """Create shapefile containing one feature for each HexCell in HexGroup using osgeo library.
 
         out_dir must be a filesystem folder and out_name must include .shp extension.
@@ -932,15 +969,15 @@ class HexGroup(object, env.Spatial):
 
         from osgeo import ogr, osr
 
-        if not os.path.isdir(out_dir):
+        if not os.path.isdir(workspace):
 
-            print "Path: %s" % out_dir
-            answer = raw_input("Path does not exist. Would you like to create it (Y/N)? ")
+            print "Workspace: %s" % workspace
+            answer = raw_input("Workspace does not exist. Would you like to create it (Y/N)? ")
 
             if answer.lower() in ('y', 'yes'):
 
-                os.mkdir(out_dir)
-                print "Created path: %s" % out_dir
+                os.mkdir(workspace)
+                print "Created workspace: %s" % workspace
 
             else:
 
@@ -958,7 +995,7 @@ class HexGroup(object, env.Spatial):
         temp_field_count = temp_defn.GetFieldCount()
         spatial_reference = osr.SpatialReference()
         spatial_reference.ImportFromWkt(temp_sr_wkt)
-        shp = os.path.join(out_dir, out_name)
+        shp = os.path.join(workspace, name)
 
         if overwrite is True and os.path.exists(shp):
 
