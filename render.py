@@ -31,8 +31,14 @@ class Plotter(object):
     def build_canvas(self):
         """Create Tk canvas for current figure."""
 
-    def plot(self, hex_geom_obj):
-        """Plot hexpy.geom instances using pyplot"""
+    def plot_all(self, hex_geom_list=[]):
+        """Plot all object in hex_geom_list using self.plot."""
+
+        for hex_geom_obj in hex_geom_list:
+            self.plot(hex_geom_obj)
+
+    def plot(self, hex_geom_obj=None):
+        """Plot hexpy.geom instances using pyplot."""
 
         if type(hex_geom_obj) is Extent:
 

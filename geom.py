@@ -814,19 +814,13 @@ class HexGroup(object, env.Spatial):
     def write(self, workspace=None, name=None, overwrite=False):
         """Write HexGroup data out to a file."""
 
-        if workspace and name and overwrite:
+        if os.path.splitext(workspace)[-1] in ('.gdb', '.sde', '.mdb'):
 
-            if os.path.splitext(workspace)[-1] in ('.gdb', '.sde', '.mdb'):
-
-                self.__arcpy_write_features(workspace, name, overwrite)
-
-            else:
-
-                self.__osgeo_write_features(workspace, name, overwrite)
+            self.__arcpy_write_features(workspace, name, overwrite)
 
         else:
 
-            print("Missing arguments: workspace: %s name: %s overwrite: %s" % (workspace, name, overwrite))
+            self.__osgeo_write_features(workspace, name, overwrite)
 
     def __arcpy_write_features(self, workspace=None, name=None, overwrite=False):
         """Create fgdb feature class containing one feature for each HexCell in HexGroup using arcpy library."""
@@ -905,8 +899,9 @@ class HexGroup(object, env.Spatial):
 
     # DEPRECATED
     def write_shapefile(self, out_dir=None, out_name=None, overwrite=False):
-        """Create shapefile containing one feature for each HexCell in HexGroup using arcpy library.
+        """!!!DEPRECATED!!!
 
+        Create shapefile containing one feature for each HexCell in HexGroup using arcpy library.
         out_dir must be a filesystem folder and out_name must include .shp extension.
         """
 
